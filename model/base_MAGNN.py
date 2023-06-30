@@ -79,6 +79,8 @@ class MAGNN_metapath_specific(nn.Module):
         else:
             g, features, type_mask, edge_metapath_indices = inputs
 
+        # g = g.to(torch.device('cuda:0'))
+
         # Embedding layer
         # use torch.nn.functional.embedding or torch.embedding here
         # do not use torch.nn.embedding
@@ -168,7 +170,10 @@ class MAGNN_metapath_specific(nn.Module):
         else:
             a = (eft * self.attn).sum(dim=-1).unsqueeze(dim=-1)  # E x num_heads x 1
         a = self.leaky_relu(a)
+        g = g.to(torch.device('cuda:0'))
         g.edata.update({'eft': eft, 'a': a})
+        # import dgl
+        # dgl.view.HeteroEdgeDataView
         # compute softmax normalized attention values
         self.edge_softmax(g)
         # compute the aggregated node features scaled by the dropped,

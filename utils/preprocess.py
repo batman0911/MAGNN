@@ -34,6 +34,7 @@ def get_metapath_neighbor_pairs(M, type_mask, expected_metapaths):
             temp[np.ix_(type_mask == metapath[i + 1], type_mask == metapath[i])] = True
             mask = np.logical_or(mask, temp)
         partial_g_nx = nx.from_numpy_matrix((M * mask).astype(int))
+        # partial_g_nx = nx.DiGraph((M * mask).astype(int))
 
         # only need to consider the former half of the metapath
         # e.g., we only need to consider 0-1-2 for the metapath 0-1-2-1-0
