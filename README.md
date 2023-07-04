@@ -9,13 +9,8 @@ Available at [arXiv:2002.01680](https://arxiv.org/abs/2002.01680).
 
 ### Dependencies
 
-Recent versions of the following packages for Python 3 are required:
-* PyTorch 1.2.0
-* DGL 0.3.1
-* NetworkX 2.3
-* scikit-learn 0.21.3
-* NumPy 1.17.2
-* SciPy 1.3.1
+Recent versions of the following packages for Python 3 are required in `requirements.txt`. 
+The original code runs with CPU (just install `dgl==1.1.1`) and `torch` version 1, for GPU version and `torch` version 2 , you should install `dgl==1.1.1+cu118` and all dependencies in `requirements.txt`.
 
 Dependencies for the preprocessing code are not listed here.
 
