@@ -24,6 +24,7 @@ def run_model_IMDB(feats_type, num_layers, hidden_dim, num_heads, attn_vec_dim, 
                    num_epochs, patience, repeat, save_postfix):
     nx_G_lists, edge_metapath_indices_lists, features_list, adjM, type_mask, labels, train_val_test_idx = load_IMDB_data()
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    print(f'\n\ntorch device: {device}\n\n')
     # device = torch.device('cpu')
     features_list = [torch.FloatTensor(features.todense()).to(device) for features in features_list]
     if feats_type == 0:
