@@ -34,6 +34,8 @@ def run_model_LastFM(feats_type, hidden_dim, num_heads, attn_vec_dim, rnn_type,
     adjlists_ua, edge_metapath_indices_list_ua, _, type_mask, train_val_test_pos_user_artist, train_val_test_neg_user_artist = load_LastFM_data()
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     
+    # device = torch.device('cpu')
+    
     print(f'\n\n torch device: {device}\n\n')
     
     features_list = []
@@ -76,8 +78,13 @@ def run_model_LastFM(feats_type, hidden_dim, num_heads, attn_vec_dim, rnn_type,
         dur3 = []
         train_pos_idx_generator = index_generator(batch_size=batch_size, num_data=len(train_pos_user_artist))
         val_idx_generator = index_generator(batch_size=batch_size, num_data=len(val_pos_user_artist), shuffle=False)
+        
+        print(f'num_epoches: {num_epochs}, train iterations per epoche: {train_pos_idx_generator.num_iterations()}, val iterations per epoche: {val_idx_generator.num_iterations()}')
+        
+        num_prc = 6
+        
+        
         for epoch in range(num_epochs):
-
             t_start = time.time()
             # training
             net.train()
@@ -96,6 +103,10 @@ def run_model_LastFM(feats_type, hidden_dim, num_heads, attn_vec_dim, rnn_type,
                     adjlists_ua, edge_metapath_indices_list_ua, train_pos_user_artist_batch, device, neighbor_samples, use_masks, num_user)
                 train_neg_g_lists, train_neg_indices_lists, train_neg_idx_batch_mapped_lists = parse_minibatch_LastFM(
                     adjlists_ua, edge_metapath_indices_list_ua, train_neg_user_artist_batch, device, neighbor_samples, no_masks, num_user)
+                
+                # print(f'train_pos_g_lists: {train_pos_g_lists[0][0].device}') 
+                # print(f'train_pos_indices_lists: {train_pos_indices_lists[0][0].is_cuda}')
+                # print(f'train_pos_idx_batch_mapped_list: {train_pos_idx_batch_mapped_lists[0][0].is_cuda}')
 
                 t1 = time.time()
                 dur1.append(t1 - t0)
@@ -124,7 +135,7 @@ def run_model_LastFM(feats_type, hidden_dim, num_heads, attn_vec_dim, rnn_type,
                 dur3.append(t3 - t2)
 
                 # print training info
-                if iteration % 100 == 0:
+                if iteration % 10 == 0:
                     print(
                         'Epoch {:05d} | Iteration {:05d} | Train_Loss {:.4f} | Time1(s) {:.4f} | Time2(s) {:.4f} | Time3(s) {:.4f}'.format(
                             epoch, iteration, train_loss.item(), np.mean(dur1), np.mean(dur2), np.mean(dur3)))

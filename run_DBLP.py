@@ -88,6 +88,12 @@ def run_model_DBLP(feats_type, hidden_dim, num_heads, attn_vec_dim, rnn_type,
         val_g_list, val_indices_list, val_idx_batch_mapped_list = parse_minibatch(
             adjlists, edge_metapath_indices_list, val_idx_batch, device, neighbor_samples)
         
+        val_idx_batch_mapped_list = [torch.LongTensor(indices).to(device) for indices in val_idx_batch_mapped_list]
+        
+        val_g_list = [g.to(device) for g in val_g_list]
+        
+        print(f'val_g_list: {val_g_list[0].device}, val_indices_list: {val_indices_list[0].is_cuda}, val_idx_batch_mapped_list: {val_idx_batch_mapped_list[0].is_cuda}')
+        
         for epoch in range(num_epochs):
             t_start = time.time()
             # training
