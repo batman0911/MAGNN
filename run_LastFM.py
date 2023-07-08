@@ -96,6 +96,10 @@ def run_model_LastFM(feats_type, hidden_dim, num_heads, attn_vec_dim, rnn_type,
                     adjlists_ua, edge_metapath_indices_list_ua, train_pos_user_artist_batch, device, neighbor_samples, use_masks, num_user)
                 train_neg_g_lists, train_neg_indices_lists, train_neg_idx_batch_mapped_lists = parse_minibatch_LastFM(
                     adjlists_ua, edge_metapath_indices_list_ua, train_neg_user_artist_batch, device, neighbor_samples, no_masks, num_user)
+                
+                # print(f'train_pos_g_lists: {train_pos_g_lists[0][0].device}') 
+                # print(f'train_pos_indices_lists: {train_pos_indices_lists[0][0].is_cuda}')
+                # print(f'train_pos_idx_batch_mapped_list: {train_pos_idx_batch_mapped_lists[0][0].is_cuda}')
 
                 t1 = time.time()
                 dur1.append(t1 - t0)
