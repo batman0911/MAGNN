@@ -151,3 +151,4 @@ dmypy.json
 # IntelliJ project files
 
 data/preprocessed
+data/preprocessed_custom

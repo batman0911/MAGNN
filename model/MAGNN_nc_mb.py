@@ -55,8 +55,8 @@ class MAGNN_nc_mb_layer(nn.Module):
     def forward(self, inputs):
         # ctr_ntype-specific layers
         h = self.ctr_ntype_layer(inputs)
-
         h_fc = self.fc(h)
+        # print(f'h: {h.is_cuda}, h_fc: {h_fc.is_cuda}')
         return h_fc, h
 
 

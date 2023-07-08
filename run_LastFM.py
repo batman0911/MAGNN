@@ -33,6 +33,9 @@ def run_model_LastFM(feats_type, hidden_dim, num_heads, attn_vec_dim, rnn_type,
                      num_epochs, patience, batch_size, neighbor_samples, repeat, save_postfix):
     adjlists_ua, edge_metapath_indices_list_ua, _, type_mask, train_val_test_pos_user_artist, train_val_test_neg_user_artist = load_LastFM_data()
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    
+    print(f'\n\n torch device: {device}\n\n')
+    
     features_list = []
     in_dims = []
     if feats_type == 0:
@@ -74,6 +77,7 @@ def run_model_LastFM(feats_type, hidden_dim, num_heads, attn_vec_dim, rnn_type,
         train_pos_idx_generator = index_generator(batch_size=batch_size, num_data=len(train_pos_user_artist))
         val_idx_generator = index_generator(batch_size=batch_size, num_data=len(val_pos_user_artist), shuffle=False)
         for epoch in range(num_epochs):
+
             t_start = time.time()
             # training
             net.train()

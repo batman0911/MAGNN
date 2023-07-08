@@ -171,7 +171,7 @@ class MAGNN_metapath_specific(nn.Module):
             a = (eft * self.attn).sum(dim=-1).unsqueeze(dim=-1)  # E x num_heads x 1
             
         a = self.leaky_relu(a)
-        g = g.to(torch.device(g.device))
+        g = g.to(torch.device('cuda:0'))
         g.edata.update({'eft': eft, 'a': a})
         
         # compute softmax normalized attention values
