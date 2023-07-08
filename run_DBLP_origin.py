@@ -135,7 +135,7 @@ def run_model_DBLP(feats_type, hidden_dim, num_heads, attn_vec_dim, rnn_type,
                 break
 
         # testing with evaluate_results_nc
-        test_idx_generator = index_generator(batch_size=batch_size, indices=test_idx, shuffle=False)
+        test_idx_generator = index_generator(batch_size=len(test_idx), indices=test_idx, shuffle=False)
         net.load_state_dict(torch.load('checkpoint/checkpoint_{}.pt'.format(save_postfix)))
         net.eval()
         test_embeddings = []
@@ -196,7 +196,7 @@ if __name__ == '__main__':
     ap.add_argument('--batch-size', type=int, default=8, help='Batch size. Default is 8.')
     ap.add_argument('--samples', type=int, default=100, help='Number of neighbors sampled. Default is 100.')
     ap.add_argument('--repeat', type=int, default=1, help='Repeat the training and testing for N times. Default is 1.')
-    ap.add_argument('--save-postfix', default='DBLP', help='Postfix for the saved model and result. Default is DBLP.')
+    ap.add_argument('--save-postfix', default='DBLP_origin', help='Postfix for the saved model and result. Default is DBLP.')
 
     args = ap.parse_args()
     run_model_DBLP(args.feats_type, args.hidden_dim, args.num_heads, args.attn_vec_dim, args.rnn_type,
