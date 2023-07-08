@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score, normalized_mutual_info_score, adjusted_rand_score
 from sklearn.cluster import KMeans
 from sklearn.svm import LinearSVC
+import multiprocessing
 
 
 def idx_to_one_hot(idx_arr):
@@ -202,9 +203,11 @@ def parse_minibatch_LastFM(adjlists_ua, edge_metapath_indices_list_ua, user_arti
                 result_indices = torch.LongTensor(result_indices[sorted_index]).to(device)
             else:
                 result_indices = torch.LongTensor(result_indices).to(device)
+                
+            g = g.to(device)
             g_lists[mode].append(g)
             result_indices_lists[mode].append(result_indices)
-            idx_batch_mapped_lists[mode].append(np.array([mapping[row[mode]] for row in user_artist_batch]))
+            idx_batch_mapped_lists[mode].append(torch.LongTensor(np.array([mapping[row[mode]] for row in user_artist_batch])).to(device))
 
     return g_lists, result_indices_lists, idx_batch_mapped_lists
 
@@ -239,3 +242,30 @@ class index_generator:
         if self.shuffle:
             np.random.shuffle(self.indices)
         self.iter_counter = 0
+       
+        
+def batch_data_pool(num_process, idx_generator):
+    idx_batch_pool = []
+    for i in range(num_process):
+        idx_batch_pool.append(idx_generator.next())
+        
+    pool = multiprocessing.Pool(num_process)
+    # result = pool.map()    
+    
+def batch_item(idx_batch, pos_user_artist, neg_user_artist, 
+               adjlists_ua, edge_metapath_indices_list_ua, device, neighbor_samples, use_masks, num_user):
+    idx_batch.sort()
+    pos_user_artist_batch = pos_user_artist[idx_batch].tolist()
+    neg_idx_batch = np.random.choice(len(neg_user_artist), len(idx_batch))
+    neg_idx_batch.sort()
+    neg_user_artist_batch = neg_user_artist[neg_idx_batch].tolist()
+
+    pos_g_lists, pos_indices_lists, pos_idx_batch_mapped_lists = parse_minibatch_LastFM(
+        adjlists_ua, edge_metapath_indices_list_ua, pos_user_artist_batch, device, neighbor_samples, use_masks, num_user)
+    neg_g_lists, neg_indices_lists, neg_idx_batch_mapped_lists = parse_minibatch_LastFM(
+        adjlists_ua, edge_metapath_indices_list_ua, neg_user_artist_batch, device, neighbor_samples, no_masks, num_user)
+    
+    return {
+        'pos': (pos_g_lists, pos_indices_lists, pos_idx_batch_mapped_lists),
+        'neg': (neg_g_lists, neg_indices_lists, neg_idx_batch_mapped_lists)
+    }

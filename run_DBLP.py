@@ -70,59 +70,72 @@ def run_model_DBLP(feats_type, hidden_dim, num_heads, attn_vec_dim, rnn_type,
         dur1 = []
         dur2 = []
         dur3 = []
-        train_idx_generator = index_generator(batch_size=batch_size, indices=train_idx)
-        val_idx_generator = index_generator(batch_size=batch_size, indices=val_idx, shuffle=False)
+        train_idx_generator = index_generator(batch_size=len(train_idx), indices=train_idx)
+        val_idx_generator = index_generator(batch_size=len(val_idx), indices=val_idx, shuffle=False)
+        
+        train_idx_batch = train_idx_generator.next()
+        train_idx_batch.sort()
+        train_g_list, train_indices_list, train_idx_batch_mapped_list = parse_minibatch(
+            adjlists, edge_metapath_indices_list, train_idx_batch, device, neighbor_samples)
+        
+        train_idx_batch_mapped_list = [torch.LongTensor(indices).to(device) for indices in train_idx_batch_mapped_list]
+        
+        train_g_list = [g.to(device) for g in train_g_list]
+        
+        print(f'train_g_list: {train_g_list[0].device}, train_indices_list: {train_indices_list[0].is_cuda}, train_idx_batch_mapped_list: {train_idx_batch_mapped_list[0].is_cuda}')
+        
+        val_idx_batch = val_idx_generator.next()
+        val_g_list, val_indices_list, val_idx_batch_mapped_list = parse_minibatch(
+            adjlists, edge_metapath_indices_list, val_idx_batch, device, neighbor_samples)
+        
+        val_idx_batch_mapped_list = [torch.LongTensor(indices).to(device) for indices in val_idx_batch_mapped_list]
+        
+        val_g_list = [g.to(device) for g in val_g_list]
+        
+        print(f'val_g_list: {val_g_list[0].device}, val_indices_list: {val_indices_list[0].is_cuda}, val_idx_batch_mapped_list: {val_idx_batch_mapped_list[0].is_cuda}')
+        
         for epoch in range(num_epochs):
             t_start = time.time()
             # training
             net.train()
-            for iteration in range(train_idx_generator.num_iterations()):
-                # forward
-                t0 = time.time()
+            
+            # forward
+            t0 = time.time()
 
-                train_idx_batch = train_idx_generator.next()
-                train_idx_batch.sort()
-                train_g_list, train_indices_list, train_idx_batch_mapped_list = parse_minibatch(
-                    adjlists, edge_metapath_indices_list, train_idx_batch, device, neighbor_samples)
+            t1 = time.time()
+            dur1.append(t1 - t0)
 
-                t1 = time.time()
-                dur1.append(t1 - t0)
+            logits, embeddings = net(
+                (train_g_list, features_list, type_mask, train_indices_list, train_idx_batch_mapped_list))
+            logp = F.log_softmax(logits, 1)
+            train_loss = F.nll_loss(logp, labels[train_idx_batch])
 
-                logits, embeddings = net(
-                    (train_g_list, features_list, type_mask, train_indices_list, train_idx_batch_mapped_list))
-                logp = F.log_softmax(logits, 1)
-                train_loss = F.nll_loss(logp, labels[train_idx_batch])
+            t2 = time.time()
+            dur2.append(t2 - t1)
 
-                t2 = time.time()
-                dur2.append(t2 - t1)
+            # autograd
+            optimizer.zero_grad()
+            train_loss.backward()
+            optimizer.step()
 
-                # autograd
-                optimizer.zero_grad()
-                train_loss.backward()
-                optimizer.step()
+            t3 = time.time()
+            dur3.append(t3 - t2)
 
-                t3 = time.time()
-                dur3.append(t3 - t2)
-
-                # print training info
-                if iteration % 50 == 0:
-                    print(
-                        'Epoch {:05d} | Iteration {:05d} | Train_Loss {:.4f} | Time1(s) {:.4f} | Time2(s) {:.4f} | Time3(s) {:.4f}'.format(
-                            epoch, iteration, train_loss.item(), np.mean(dur1), np.mean(dur2), np.mean(dur3)))
+            # print training info
+            # if iteration % 50 == 0:
+            print(
+                'Epoch {:05d} | Train_Loss {:.4f} | Time1(s) {:.4f} | Time2(s) {:.4f} | Time3(s) {:.4f}'.format(
+                    epoch, train_loss.item(), np.mean(dur1), np.mean(dur2), np.mean(dur3)))
 
             # validation
             net.eval()
             val_logp = []
             with torch.no_grad():
-                for iteration in range(val_idx_generator.num_iterations()):
-                    # forward
-                    val_idx_batch = val_idx_generator.next()
-                    val_g_list, val_indices_list, val_idx_batch_mapped_list = parse_minibatch(
-                        adjlists, edge_metapath_indices_list, val_idx_batch, device, neighbor_samples)
-                    logits, embeddings = net(
-                        (val_g_list, features_list, type_mask, val_indices_list, val_idx_batch_mapped_list))
-                    logp = F.log_softmax(logits, 1)
-                    val_logp.append(logp)
+                # forward
+                logits, embeddings = net(
+                    (val_g_list, features_list, type_mask, val_indices_list, val_idx_batch_mapped_list))
+                logp = F.log_softmax(logits, 1)
+                val_logp.append(logp)
                 val_loss = F.nll_loss(torch.cat(val_logp, 0), labels[val_idx])
             t_end = time.time()
             # print validation info
