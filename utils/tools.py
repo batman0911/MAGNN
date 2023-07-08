@@ -118,7 +118,8 @@ def parse_minibatch(adjlists, edge_metapath_indices_list, idx_batch, device, sam
         else:
             result_indices = torch.LongTensor(result_indices).to(device)
         #g.add_edges(*list(zip(*[(dst, src) for src, dst in sorted(edges)])))
-        #result_indices = torch.LongTensor(result_indices).to(device)
+        # result_indices = torch.LongTensor(result_indices).to(device)
+        # g = g.to(device)
         g_list.append(g)
         result_indices_list.append(result_indices)
         idx_batch_mapped_list.append(np.array([mapping[idx] for idx in idx_batch]))
