@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score, normalized_mutual_info_score, adjusted_rand_score
 from sklearn.cluster import KMeans
 from sklearn.svm import LinearSVC
+import multiprocessing
 
 
 def idx_to_one_hot(idx_arr):
@@ -112,13 +113,13 @@ def parse_minibatch(adjlists, edge_metapath_indices_list, idx_batch, device, sam
         g = dgl.DGLGraph(multigraph=True)
         g.add_nodes(num_nodes)
         if len(edges) > 0:
-            sorted_index = sorted(range(len(edges)), key=lambda i : edges[i])
+            sorted_index = sorted(range(len(edges)), key=lambda i: edges[i])
             g.add_edges(*list(zip(*[(edges[i][1], edges[i][0]) for i in sorted_index])))
             result_indices = torch.LongTensor(result_indices[sorted_index]).to(device)
         else:
             result_indices = torch.LongTensor(result_indices).to(device)
-        #g.add_edges(*list(zip(*[(dst, src) for src, dst in sorted(edges)])))
-        #result_indices = torch.LongTensor(result_indices).to(device)
+        # g.add_edges(*list(zip(*[(dst, src) for src, dst in sorted(edges)])))
+        # result_indices = torch.LongTensor(result_indices).to(device)
         g_list.append(g)
         result_indices_list.append(result_indices)
         idx_batch_mapped_list.append(np.array([mapping[idx] for idx in idx_batch]))
@@ -138,9 +139,11 @@ def parse_adjlist_LastFM(adjlist, edge_metapath_indices, samples=None, exclude=N
             if samples is None:
                 if exclude is not None:
                     if mode == 0:
-                        mask = [False if [u1, a1 - offset] in exclude or [u2, a2 - offset] in exclude else True for u1, a1, u2, a2 in indices[:, [0, 1, -1, -2]]]
+                        mask = [False if [u1, a1 - offset] in exclude or [u2, a2 - offset] in exclude else True for
+                                u1, a1, u2, a2 in indices[:, [0, 1, -1, -2]]]
                     else:
-                        mask = [False if [u1, a1 - offset] in exclude or [u2, a2 - offset] in exclude else True for a1, u1, a2, u2 in indices[:, [0, 1, -1, -2]]]
+                        mask = [False if [u1, a1 - offset] in exclude or [u2, a2 - offset] in exclude else True for
+                                a1, u1, a2, u2 in indices[:, [0, 1, -1, -2]]]
                     neighbors = np.array(row_parsed[1:])[mask]
                     result_indices.append(indices[mask])
                 else:
@@ -158,9 +161,11 @@ def parse_adjlist_LastFM(adjlist, edge_metapath_indices, samples=None, exclude=N
                 sampled_idx = np.sort(np.random.choice(len(row_parsed) - 1, samples, replace=False, p=p))
                 if exclude is not None:
                     if mode == 0:
-                        mask = [False if [u1, a1 - offset] in exclude or [u2, a2 - offset] in exclude else True for u1, a1, u2, a2 in indices[sampled_idx][:, [0, 1, -1, -2]]]
+                        mask = [False if [u1, a1 - offset] in exclude or [u2, a2 - offset] in exclude else True for
+                                u1, a1, u2, a2 in indices[sampled_idx][:, [0, 1, -1, -2]]]
                     else:
-                        mask = [False if [u1, a1 - offset] in exclude or [u2, a2 - offset] in exclude else True for a1, u1, a2, u2 in indices[sampled_idx][:, [0, 1, -1, -2]]]
+                        mask = [False if [u1, a1 - offset] in exclude or [u2, a2 - offset] in exclude else True for
+                                a1, u1, a2, u2 in indices[sampled_idx][:, [0, 1, -1, -2]]]
                     neighbors = np.array([row_parsed[i + 1] for i in sampled_idx])[mask]
                     result_indices.append(indices[sampled_idx][mask])
                 else:
@@ -181,7 +186,8 @@ def parse_adjlist_LastFM(adjlist, edge_metapath_indices, samples=None, exclude=N
     return edges, result_indices, len(nodes), mapping
 
 
-def parse_minibatch_LastFM(adjlists_ua, edge_metapath_indices_list_ua, user_artist_batch, device, samples=None, use_masks=None, offset=None):
+def parse_minibatch_LastFM(adjlists_ua, edge_metapath_indices_list_ua, user_artist_batch, device, samples=None,
+                           use_masks=None, offset=None):
     g_lists = [[], []]
     result_indices_lists = [[], []]
     idx_batch_mapped_lists = [[], []]
@@ -189,22 +195,27 @@ def parse_minibatch_LastFM(adjlists_ua, edge_metapath_indices_list_ua, user_arti
         for adjlist, indices, use_mask in zip(adjlists, edge_metapath_indices_list, use_masks[mode]):
             if use_mask:
                 edges, result_indices, num_nodes, mapping = parse_adjlist_LastFM(
-                    [adjlist[row[mode]] for row in user_artist_batch], [indices[row[mode]] for row in user_artist_batch], samples, user_artist_batch, offset, mode)
+                    [adjlist[row[mode]] for row in user_artist_batch],
+                    [indices[row[mode]] for row in user_artist_batch], samples, user_artist_batch, offset, mode)
             else:
                 edges, result_indices, num_nodes, mapping = parse_adjlist_LastFM(
-                    [adjlist[row[mode]] for row in user_artist_batch], [indices[row[mode]] for row in user_artist_batch], samples, offset=offset, mode=mode)
+                    [adjlist[row[mode]] for row in user_artist_batch],
+                    [indices[row[mode]] for row in user_artist_batch], samples, offset=offset, mode=mode)
 
             g = dgl.DGLGraph(multigraph=True)
             g.add_nodes(num_nodes)
             if len(edges) > 0:
-                sorted_index = sorted(range(len(edges)), key=lambda i : edges[i])
+                sorted_index = sorted(range(len(edges)), key=lambda i: edges[i])
                 g.add_edges(*list(zip(*[(edges[i][1], edges[i][0]) for i in sorted_index])))
                 result_indices = torch.LongTensor(result_indices[sorted_index]).to(device)
             else:
                 result_indices = torch.LongTensor(result_indices).to(device)
+
+            g = g.to(device)
             g_lists[mode].append(g)
             result_indices_lists[mode].append(result_indices)
-            idx_batch_mapped_lists[mode].append(np.array([mapping[row[mode]] for row in user_artist_batch]))
+            idx_batch_mapped_lists[mode].append(
+                torch.LongTensor(np.array([mapping[row[mode]] for row in user_artist_batch])).to(device))
 
     return g_lists, result_indices_lists, idx_batch_mapped_lists
 
@@ -239,3 +250,51 @@ class index_generator:
         if self.shuffle:
             np.random.shuffle(self.indices)
         self.iter_counter = 0
+
+
+def batch_data_pool(pool, num_process, idx_generator, pos_user_artist, neg_user_artist,
+                    adjlists_ua, edge_metapath_indices_list_ua, device, neighbor_samples, use_masks, no_masks, num_user):
+    idx_batch_pool = []
+    params = []
+    for i in range(num_process):
+        idx_batch = idx_generator.next()
+        idx_batch_pool.append(idx_batch)
+        params.append((idx_batch, pos_user_artist, neg_user_artist,
+                       adjlists_ua, edge_metapath_indices_list_ua, device, neighbor_samples, use_masks, no_masks, num_user))
+
+    results = pool.starmap(batch_item, params)
+    return results
+
+
+def batch_test(*args):
+    return {
+        'pos': args[2].next(),
+        'neg': args * 3
+    }
+
+
+def batch_item(idx_batch, pos_user_artist, neg_user_artist,
+               adjlists_ua, edge_metapath_indices_list_ua, device, neighbor_samples, use_masks, no_masks, num_user):
+    print(f'start batch item')
+    idx_batch.sort()
+    pos_user_artist_batch = pos_user_artist[idx_batch].tolist()
+    neg_idx_batch = np.random.choice(len(neg_user_artist), len(idx_batch))
+    neg_idx_batch.sort()
+    neg_user_artist_batch = neg_user_artist[neg_idx_batch].tolist()
+
+    print(f'start parse mini batch')
+    pos_g_lists, pos_indices_lists, pos_idx_batch_mapped_lists = parse_minibatch_LastFM(
+        adjlists_ua, edge_metapath_indices_list_ua, pos_user_artist_batch, device, neighbor_samples, use_masks,
+        num_user)
+    neg_g_lists, neg_indices_lists, neg_idx_batch_mapped_lists = parse_minibatch_LastFM(
+        adjlists_ua, edge_metapath_indices_list_ua, neg_user_artist_batch, device, neighbor_samples, no_masks, num_user)
+
+    return {
+        'pos': (pos_g_lists, pos_indices_lists, pos_idx_batch_mapped_lists),
+        'neg': (neg_g_lists, neg_indices_lists, neg_idx_batch_mapped_lists)
+    }
+    
+    # return {
+    #     'pos': pos_user_artist_batch,
+    #     'neg': neg_user_artist_batch
+    # }

@@ -70,72 +70,59 @@ def run_model_DBLP(feats_type, hidden_dim, num_heads, attn_vec_dim, rnn_type,
         dur1 = []
         dur2 = []
         dur3 = []
-        train_idx_generator = index_generator(batch_size=len(train_idx), indices=train_idx)
-        val_idx_generator = index_generator(batch_size=len(val_idx), indices=val_idx, shuffle=False)
-        
-        train_idx_batch = train_idx_generator.next()
-        train_idx_batch.sort()
-        train_g_list, train_indices_list, train_idx_batch_mapped_list = parse_minibatch(
-            adjlists, edge_metapath_indices_list, train_idx_batch, device, neighbor_samples)
-        
-        train_idx_batch_mapped_list = [torch.LongTensor(indices).to(device) for indices in train_idx_batch_mapped_list]
-        
-        train_g_list = [g.to(device) for g in train_g_list]
-        
-        print(f'train_g_list: {train_g_list[0].device}, train_indices_list: {train_indices_list[0].is_cuda}, train_idx_batch_mapped_list: {train_idx_batch_mapped_list[0].is_cuda}')
-        
-        val_idx_batch = val_idx_generator.next()
-        val_g_list, val_indices_list, val_idx_batch_mapped_list = parse_minibatch(
-            adjlists, edge_metapath_indices_list, val_idx_batch, device, neighbor_samples)
-        
-        val_idx_batch_mapped_list = [torch.LongTensor(indices).to(device) for indices in val_idx_batch_mapped_list]
-        
-        val_g_list = [g.to(device) for g in val_g_list]
-        
-        print(f'val_g_list: {val_g_list[0].device}, val_indices_list: {val_indices_list[0].is_cuda}, val_idx_batch_mapped_list: {val_idx_batch_mapped_list[0].is_cuda}')
-        
+        train_idx_generator = index_generator(batch_size=batch_size, indices=train_idx)
+        val_idx_generator = index_generator(batch_size=batch_size, indices=val_idx, shuffle=False)
         for epoch in range(num_epochs):
             t_start = time.time()
             # training
             net.train()
-            
-            # forward
-            t0 = time.time()
+            for iteration in range(train_idx_generator.num_iterations()):
+                # forward
+                t0 = time.time()
 
-            t1 = time.time()
-            dur1.append(t1 - t0)
+                train_idx_batch = train_idx_generator.next()
+                train_idx_batch.sort()
+                train_g_list, train_indices_list, train_idx_batch_mapped_list = parse_minibatch(
+                    adjlists, edge_metapath_indices_list, train_idx_batch, device, neighbor_samples)
 
-            logits, embeddings = net(
-                (train_g_list, features_list, type_mask, train_indices_list, train_idx_batch_mapped_list))
-            logp = F.log_softmax(logits, 1)
-            train_loss = F.nll_loss(logp, labels[train_idx_batch])
+                t1 = time.time()
+                dur1.append(t1 - t0)
 
-            t2 = time.time()
-            dur2.append(t2 - t1)
+                logits, embeddings = net(
+                    (train_g_list, features_list, type_mask, train_indices_list, train_idx_batch_mapped_list))
+                logp = F.log_softmax(logits, 1)
+                train_loss = F.nll_loss(logp, labels[train_idx_batch])
 
-            # autograd
-            optimizer.zero_grad()
-            train_loss.backward()
-            optimizer.step()
+                t2 = time.time()
+                dur2.append(t2 - t1)
 
-            t3 = time.time()
-            dur3.append(t3 - t2)
+                # autograd
+                optimizer.zero_grad()
+                train_loss.backward()
+                optimizer.step()
 
-            # print training info
-            # if iteration % 50 == 0:
-            print(
-                'Epoch {:05d} | Train_Loss {:.4f} | Time1(s) {:.4f} | Time2(s) {:.4f} | Time3(s) {:.4f}'.format(
-                    epoch, train_loss.item(), np.mean(dur1), np.mean(dur2), np.mean(dur3)))
+                t3 = time.time()
+                dur3.append(t3 - t2)
+
+                # print training info
+                if iteration % 50 == 0:
+                    print(
+                        'Epoch {:05d} | Iteration {:05d} | Train_Loss {:.4f} | Time1(s) {:.4f} | Time2(s) {:.4f} | Time3(s) {:.4f}'.format(
+                            epoch, iteration, train_loss.item(), np.mean(dur1), np.mean(dur2), np.mean(dur3)))
 
             # validation
             net.eval()
             val_logp = []
             with torch.no_grad():
-                # forward
-                logits, embeddings = net(
-                    (val_g_list, features_list, type_mask, val_indices_list, val_idx_batch_mapped_list))
-                logp = F.log_softmax(logits, 1)
-                val_logp.append(logp)
+                for iteration in range(val_idx_generator.num_iterations()):
+                    # forward
+                    val_idx_batch = val_idx_generator.next()
+                    val_g_list, val_indices_list, val_idx_batch_mapped_list = parse_minibatch(
+                        adjlists, edge_metapath_indices_list, val_idx_batch, device, neighbor_samples)
+                    logits, embeddings = net(
+                        (val_g_list, features_list, type_mask, val_indices_list, val_idx_batch_mapped_list))
+                    logp = F.log_softmax(logits, 1)
+                    val_logp.append(logp)
                 val_loss = F.nll_loss(torch.cat(val_logp, 0), labels[val_idx])
             t_end = time.time()
             # print validation info
@@ -148,7 +135,7 @@ def run_model_DBLP(feats_type, hidden_dim, num_heads, attn_vec_dim, rnn_type,
                 break
 
         # testing with evaluate_results_nc
-        test_idx_generator = index_generator(batch_size=batch_size, indices=test_idx, shuffle=False)
+        test_idx_generator = index_generator(batch_size=len(test_idx), indices=test_idx, shuffle=False)
         net.load_state_dict(torch.load('checkpoint/checkpoint_{}.pt'.format(save_postfix)))
         net.eval()
         test_embeddings = []
@@ -209,7 +196,7 @@ if __name__ == '__main__':
     ap.add_argument('--batch-size', type=int, default=8, help='Batch size. Default is 8.')
     ap.add_argument('--samples', type=int, default=100, help='Number of neighbors sampled. Default is 100.')
     ap.add_argument('--repeat', type=int, default=1, help='Repeat the training and testing for N times. Default is 1.')
-    ap.add_argument('--save-postfix', default='DBLP_custom', help='Postfix for the saved model and result. Default is DBLP.')
+    ap.add_argument('--save-postfix', default='DBLP_origin', help='Postfix for the saved model and result. Default is DBLP.')
 
     args = ap.parse_args()
     run_model_DBLP(args.feats_type, args.hidden_dim, args.num_heads, args.attn_vec_dim, args.rnn_type,
