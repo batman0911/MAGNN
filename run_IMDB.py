@@ -27,6 +27,7 @@ def run_model_IMDB(feats_type, num_layers, hidden_dim, num_heads, attn_vec_dim, 
     print(f'\n\ntorch device: {device}\n\n')
     # device = torch.device('cpu')
     features_list = [torch.FloatTensor(features.todense()).to(device) for features in features_list]
+    print(f'\n\nlen : {len(features_list[0])}, {len(features_list[1])}')
     if feats_type == 0:
         in_dims = [features.shape[1] for features in features_list]
     elif feats_type == 1:
@@ -36,8 +37,10 @@ def run_model_IMDB(feats_type, num_layers, hidden_dim, num_heads, attn_vec_dim, 
     elif feats_type == 2:
         in_dims = [features.shape[0] for features in features_list]
         in_dims[0] = features_list[0].shape[1]
+        print(f'\n\n dim : {in_dims[0]}')
         for i in range(1, len(features_list)):
             dim = features_list[i].shape[0]
+            print(f'\n\n feature dim: {dim}')
             indices = np.vstack((np.arange(dim), np.arange(dim)))
             indices = torch.LongTensor(indices)
             values = torch.FloatTensor(np.ones(dim))
@@ -72,6 +75,7 @@ def run_model_IMDB(feats_type, num_layers, hidden_dim, num_heads, attn_vec_dim, 
     ari_mean_list = []
     ari_std_list = []
     for _ in range(repeat):
+        print(f'in_dim: {in_dims}, hidden dim: {hidden_dim}, out_dim: {out_dim}')
         net = MAGNN_nc(num_layers, [2, 2, 2], 4, etypes_lists, in_dims, hidden_dim, out_dim, num_heads, attn_vec_dim,
                        rnn_type, dropout_rate)
         net.to(device)

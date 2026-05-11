@@ -262,14 +262,14 @@ def batch_data_pool(pool, num_process, idx_generator, pos_user_artist, neg_user_
         params.append((idx_batch, pos_user_artist, neg_user_artist,
                        adjlists_ua, edge_metapath_indices_list_ua, device, neighbor_samples, use_masks, no_masks, num_user))
 
-    results = pool.starmap(batch_item, params)
+    results = pool.starmap(batch_test, params)
     return results
 
 
 def batch_test(*args):
     return {
-        'pos': args[2].next(),
-        'neg': args * 3
+        'pos': args[0],
+        'neg': args[5]
     }
 
 
@@ -283,18 +283,18 @@ def batch_item(idx_batch, pos_user_artist, neg_user_artist,
     neg_user_artist_batch = neg_user_artist[neg_idx_batch].tolist()
 
     print(f'start parse mini batch')
-    pos_g_lists, pos_indices_lists, pos_idx_batch_mapped_lists = parse_minibatch_LastFM(
-        adjlists_ua, edge_metapath_indices_list_ua, pos_user_artist_batch, device, neighbor_samples, use_masks,
-        num_user)
-    neg_g_lists, neg_indices_lists, neg_idx_batch_mapped_lists = parse_minibatch_LastFM(
-        adjlists_ua, edge_metapath_indices_list_ua, neg_user_artist_batch, device, neighbor_samples, no_masks, num_user)
+    # pos_g_lists, pos_indices_lists, pos_idx_batch_mapped_lists = parse_minibatch_LastFM(
+    #     adjlists_ua, edge_metapath_indices_list_ua, pos_user_artist_batch, device, neighbor_samples, use_masks,
+    #     num_user)
+    # neg_g_lists, neg_indices_lists, neg_idx_batch_mapped_lists = parse_minibatch_LastFM(
+    #     adjlists_ua, edge_metapath_indices_list_ua, neg_user_artist_batch, device, neighbor_samples, no_masks, num_user)
 
-    return {
-        'pos': (pos_g_lists, pos_indices_lists, pos_idx_batch_mapped_lists),
-        'neg': (neg_g_lists, neg_indices_lists, neg_idx_batch_mapped_lists)
-    }
-    
     # return {
-    #     'pos': pos_user_artist_batch,
-    #     'neg': neg_user_artist_batch
+    #     'pos': (pos_g_lists, pos_indices_lists, pos_idx_batch_mapped_lists),
+    #     'neg': (neg_g_lists, neg_indices_lists, neg_idx_batch_mapped_lists)
     # }
+    
+    return {
+        'pos': pos_user_artist_batch,
+        'neg': neg_user_artist_batch
+    }

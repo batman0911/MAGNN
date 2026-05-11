@@ -64,12 +64,12 @@ def run_model_LastFM(feats_type, hidden_dim, num_heads, attn_vec_dim, rnn_type,
     auc_list = []
     ap_list = []
     
-    with multiprocessing.Pool(processes=2) as pool:
+    with multiprocessing.Pool(processes=1) as pool:
         train_pos_idx_generator = index_generator(batch_size=batch_size, num_data=len(train_pos_user_artist))
         results = batch_data_pool(pool, 2, train_pos_idx_generator, train_pos_user_artist, train_neg_user_artist,
                     adjlists_ua, edge_metapath_indices_list_ua, device, neighbor_samples, use_masks, no_masks, num_user)
     
-    print(f'results: {len(results)}')
+    print(f'results: {results}')
     
     # for _ in range(repeat):
     #     net = MAGNN_lp(
